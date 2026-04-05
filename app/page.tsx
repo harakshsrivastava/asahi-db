@@ -1,65 +1,165 @@
-import Image from "next/image";
+"use client";
+
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
+
+type Entry = {
+  id: number;
+  name: string;
+  type: string;
+  status: string;
+  chip: string;
+  method: string;
+  fps: string | null;
+  ram_gb: number | null;
+  price: string | null;
+  notes: string | null;
+};
+
+const statusRank: Record<string, number> = {
+  working: 0,
+  partial: 1,
+  broken: 2,
+};
+
+function bestStatus(entries: Entry[]) {
+  return entries.slice().sort((a, b) => statusRank[a.status] - statusRank[b.status])[0].status;
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const styles: Record<string, string> = {
+    working: "bg-[#4c9a2a] text-white",
+    partial: "bg-[#b8860b] text-white",
+    broken: "bg-[#8b0000] text-white",
+  };
+  const labels: Record<string, string> = {
+    working: "✓ Working",
+    partial: "~ Partial",
+    broken: "✗ Broken",
+  };
+  return (
+    <span className={`px-2 py-0.5 rounded text-xs font-semibold ${styles[status] ?? "bg-[#2a3f5f] text-white"}`}>
+      {labels[status] ?? status}
+    </span>
+  );
+}
 
 export default function Home() {
+  const [entries, setEntries] = useState<Entry[]>([]);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [search, setSearch] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase
+      .from("entries")
+      .select("*")
+      .then(({ data, error }) => {
+        if (error) setError(error.message);
+        else setEntries(data ?? []);
+      });
+  }, []);
+
+  const grouped = entries.reduce<Record<string, Entry[]>>((acc, entry) => {
+    acc[entry.name] = acc[entry.name] ?? [];
+    acc[entry.name].push(entry);
+    return acc;
+  }, {});
+
+  const filtered = Object.entries(grouped).filter(([name]) =>
+    name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const toggle = (name: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      next.has(name) ? next.delete(name) : next.add(name);
+      return next;
+    });
+  };
+
+  if (error) return <pre className="text-red-400 p-6">Error: {error}</pre>;
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <main className="min-h-screen bg-[#1b2838] text-[#c6d4df] font-sans">
+      <div className="bg-[#171a21] border-b border-[#2a3f5f] px-6 py-4">
+        <h1 className="text-2xl font-bold text-white tracking-wide">
+          🐧 Asahi Linux Compatibility DB
+        </h1>
+        <p className="text-sm text-[#8f98a0] mt-1">
+          Game & app compatibility for Apple Silicon on Asahi Linux —{" "}
+          <a href="/submit" className="text-[#66c0f4] hover:underline">
+            Submit an entry
+          </a>
+        </p>
+      </div>
+
+      <div className="px-6 py-6">
+        {/* Search */}
+        <input
+          type="text"
+          placeholder="Search games & apps..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full max-w-md bg-[#2a3f5f] border border-[#3d5a7a] rounded px-4 py-2 text-[#c6d4df] placeholder-[#8f98a0] focus:outline-none focus:border-[#66c0f4] mb-6"
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+
+        <table className="w-full border-collapse text-sm">
+          <thead>
+            <tr className="text-left text-[#8f98a0] border-b border-[#2a3f5f]">
+              <th className="pb-3 pr-4 font-medium w-6"></th>
+              <th className="pb-3 pr-4 font-medium">Name</th>
+              <th className="pb-3 pr-4 font-medium">Type</th>
+              <th className="pb-3 pr-4 font-medium">Best Status</th>
+              <th className="pb-3 pr-4 font-medium">Reports</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map(([name, group]) => {
+              const isOpen = expanded.has(name);
+              const first = group[0];
+              return (
+                <>
+                  <tr
+                    key={name}
+                    onClick={() => toggle(name)}
+                    className="border-b border-[#2a3f5f] hover:bg-[#2a3f5f]/30 transition-colors cursor-pointer"
+                  >
+                    <td className="py-3 pr-4 text-[#8f98a0]">{isOpen ? "▼" : "▶"}</td>
+                    <td className="py-3 pr-4 font-medium text-white">{name}</td>
+                    <td className="py-3 pr-4 capitalize text-[#8f98a0]">{first.type}</td>
+                    <td className="py-3 pr-4">
+                      <StatusBadge status={bestStatus(group)} />
+                    </td>
+                    <td className="py-3 pr-4 text-[#8f98a0]">{group.length}</td>
+                  </tr>
+                  {isOpen &&
+                    group.map((entry) => (
+                      <tr key={entry.id} className="bg-[#172430] border-b border-[#2a3f5f]">
+                        <td className="py-2 pr-4"></td>
+                        <td className="py-2 pr-4 text-[#8f98a0] text-xs">
+                          <StatusBadge status={entry.status} />
+                        </td>
+                        <td className="py-2 pr-4 text-[#8f98a0] text-xs">{entry.chip}</td>
+                        <td className="py-2 pr-4 text-[#8f98a0] text-xs">
+                          {entry.method} · {entry.fps ?? "—"} FPS · {entry.ram_gb ? `${entry.ram_gb}GB RAM` : "—"}
+                        </td>
+                        <td className="py-2 text-[#8f98a0] text-xs italic">{entry.notes}</td>
+                      </tr>
+                    ))}
+                </>
+              );
+            })}
+            {filtered.length === 0 && (
+              <tr>
+                <td colSpan={5} className="py-10 text-center text-[#8f98a0]">
+                  No results for "{search}"
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </main>
   );
 }
