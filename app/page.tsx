@@ -80,28 +80,43 @@ export default function Home() {
 
   if (error) return <pre className="text-red-400 p-6">Error: {error}</pre>;
 
+  const uniqueGames = Object.keys(grouped).length;
+
   return (
     <main className="min-h-screen bg-[#1b2838] text-[#c6d4df] font-sans">
-      <div className="bg-[#171a21] border-b border-[#2a3f5f] px-6 py-4">
-        <h1 className="text-2xl font-bold text-white tracking-wide">
-          🐧 Asahi Linux Compatibility DB
-        </h1>
-        <p className="text-sm text-[#8f98a0] mt-1">
-          Game & app compatibility for Apple Silicon on Asahi Linux —{" "}
-          <a href="/submit" className="text-[#66c0f4] hover:underline">
-            Submit an entry
-          </a>
-        </p>
+      <div className="bg-[#171a21] border-b border-[#2a3f5f] px-6 py-4 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-white tracking-wide">
+            🐧 Asahi Linux Compatibility DB
+          </h1>
+          <p className="text-sm text-[#8f98a0] mt-1">
+            Game & app compatibility for Apple Silicon on Asahi Linux
+          </p>
+        </div>
+        
+          href="/submit"
+          className="bg-[#4c9a2a] hover:bg-[#5cb830] text-white font-semibold px-4 py-2 rounded transition-colors text-sm whitespace-nowrap"
+        >
+          + Submit Entry
+        </a>
       </div>
 
       <div className="px-6 py-6">
-        <input
-          type="text"
-          placeholder="Search games & apps..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full max-w-md bg-[#2a3f5f] border border-[#3d5a7a] rounded px-4 py-2 text-[#c6d4df] placeholder-[#8f98a0] focus:outline-none focus:border-[#66c0f4] mb-6"
-        />
+        <div className="flex items-center gap-4 mb-6">
+          <input
+            type="text"
+            placeholder="Search games & apps..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full max-w-md bg-[#2a3f5f] border border-[#3d5a7a] rounded px-4 py-2 text-[#c6d4df] placeholder-[#8f98a0] focus:outline-none focus:border-[#66c0f4]"
+          />
+          <span className="text-sm text-[#8f98a0] whitespace-nowrap">
+            {uniqueGames} {uniqueGames === 1 ? "entry" : "entries"} — missing yours?{" "}
+            <a href="/submit" className="text-[#66c0f4] hover:underline">
+              Add it
+            </a>
+          </span>
+        </div>
 
         <table className="w-full border-collapse text-sm">
           <thead>
