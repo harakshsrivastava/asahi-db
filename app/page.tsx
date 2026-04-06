@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
 type Entry = {
@@ -95,7 +95,6 @@ export default function Home() {
       </div>
 
       <div className="px-6 py-6">
-        {/* Search */}
         <input
           type="text"
           placeholder="Search games & apps..."
@@ -119,9 +118,8 @@ export default function Home() {
               const isOpen = expanded.has(name);
               const first = group[0];
               return (
-                <>
+                <React.Fragment key={name}>
                   <tr
-                    key={name}
                     onClick={() => toggle(name)}
                     className="border-b border-[#2a3f5f] hover:bg-[#2a3f5f]/30 transition-colors cursor-pointer"
                   >
@@ -147,7 +145,7 @@ export default function Home() {
                         <td className="py-2 text-[#8f98a0] text-xs italic">{entry.notes}</td>
                       </tr>
                     ))}
-                </>
+                </React.Fragment>
               );
             })}
             {filtered.length === 0 && (
