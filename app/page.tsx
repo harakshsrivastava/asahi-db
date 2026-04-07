@@ -23,7 +23,13 @@ const statusRank: Record<string, number> = {
 };
 
 function bestStatus(entries: Entry[]) {
-  return entries.slice().sort((a, b) => statusRank[a.status] - statusRank[b.status])[0].status;
+  return entries
+    .slice()
+    .sort(
+      (a, b) =>
+        (statusRank[a.status] ?? 999) -
+        (statusRank[b.status] ?? 999)
+    )[0]?.status ?? "unknown";
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -32,13 +38,19 @@ function StatusBadge({ status }: { status: string }) {
     partial: "bg-[#b8860b] text-white",
     broken: "bg-[#8b0000] text-white",
   };
+
   const labels: Record<string, string> = {
     working: "✓ Working",
     partial: "~ Partial",
     broken: "✗ Broken",
   };
+
   return (
-    <span className={`px-2 py-0.5 rounded text-xs font-semibold ${styles[status] ?? "bg-[#2a3f5f] text-white"}`}>
+    <span
+      className={`px-2 py-0.5 rounded text-xs font-semibold ${
+        styles[status] ?? "bg-[#2a3f5f] text-white"
+      }`}
+    >
       {labels[status] ?? status}
     </span>
   );
@@ -61,13 +73,16 @@ export default function Home() {
   }, []);
 
   const grouped = entries.reduce<Record<string, Entry[]>>((acc, entry) => {
-    acc[entry.name] = acc[entry.name] ?? [];
-    acc[entry.name].push(entry);
+    const key = entry.name.toLowerCase();
+    acc[key] = acc[key] ?? [];
+    acc[key].push(entry);
     return acc;
   }, {});
 
+  const searchLower = search.toLowerCase();
+
   const filtered = Object.entries(grouped).filter(([name]) =>
-    name.toLowerCase().includes(search.toLowerCase())
+    name.includes(searchLower)
   );
 
   const toggle = (name: string) => {
@@ -78,9 +93,11 @@ export default function Home() {
     });
   };
 
-  if (error) return <pre className="text-red-400 p-6">Error: {error}</pre>;
+  if (error)
+    return <pre className="text-red-400 p-6">Error: {error}</pre>;
 
   const uniqueGames = Object.keys(grouped).length;
+  const totalReviews = entries.length;
 
   return (
     <main className="min-h-screen bg-[#1b2838] text-[#c6d4df] font-sans">
@@ -93,7 +110,8 @@ export default function Home() {
             Game & app compatibility for Apple Silicon on Asahi Linux
           </p>
         </div>
-        
+
+        <a
           href="/submit"
           className="bg-[#4c9a2a] hover:bg-[#5cb830] text-white font-semibold px-4 py-2 rounded transition-colors text-sm whitespace-nowrap"
         >
@@ -111,7 +129,8 @@ export default function Home() {
             className="w-full max-w-md bg-[#2a3f5f] border border-[#3d5a7a] rounded px-4 py-2 text-[#c6d4df] placeholder-[#8f98a0] focus:outline-none focus:border-[#66c0f4]"
           />
           <span className="text-sm text-[#8f98a0] whitespace-nowrap">
-            {uniqueGames} {uniqueGames === 1 ? "entry" : "entries"} — missing yours?{" "}
+            {uniqueGames} {uniqueGames === 1 ? "game" : "games"} ·{" "}
+            {totalReviews} {totalReviews === 1 ? "review" : "reviews"} — missing yours?{" "}
             <a href="/submit" className="text-[#66c0f4] hover:underline">
               Add it
             </a>
@@ -128,41 +147,61 @@ export default function Home() {
               <th className="pb-3 pr-4 font-medium">Reports</th>
             </tr>
           </thead>
+
           <tbody>
-            {filtered.map(([name, group]) => {
-              const isOpen = expanded.has(name);
+            {filtered.map(([key, group]) => {
+              const isOpen = expanded.has(key);
               const first = group[0];
+
               return (
-                <React.Fragment key={name}>
+                <React.Fragment key={key}>
                   <tr
-                    onClick={() => toggle(name)}
-                    className="border-b border-[#2a3f5f] hover:bg-[#2a3f5f]/30 transition-colors cursor-pointer"
+                    onClick={() => toggle(key)}
+                    className="border-b border-[#2a3f5f] hover:bg-[#2a3f5f]/30 cursor-pointer"
                   >
-                    <td className="py-3 pr-4 text-[#8f98a0]">{isOpen ? "▼" : "▶"}</td>
-                    <td className="py-3 pr-4 font-medium text-white">{name}</td>
-                    <td className="py-3 pr-4 capitalize text-[#8f98a0]">{first.type}</td>
+                    <td className="py-3 pr-4 text-[#8f98a0]">
+                      {isOpen ? "▼" : "▶"}
+                    </td>
+                    <td className="py-3 pr-4 text-white font-medium">
+                      {first.name}
+                    </td>
+                    <td className="py-3 pr-4 text-[#8f98a0] capitalize">
+                      {first.type}
+                    </td>
                     <td className="py-3 pr-4">
                       <StatusBadge status={bestStatus(group)} />
                     </td>
-                    <td className="py-3 pr-4 text-[#8f98a0]">{group.length}</td>
+                    <td className="py-3 pr-4 text-[#8f98a0]">
+                      {group.length}
+                    </td>
                   </tr>
+
                   {isOpen &&
                     group.map((entry) => (
-                      <tr key={entry.id} className="bg-[#172430] border-b border-[#2a3f5f]">
+                      <tr
+                        key={entry.id}
+                        className="bg-[#172430] border-b border-[#2a3f5f]"
+                      >
                         <td className="py-2 pr-4"></td>
-                        <td className="py-2 pr-4 text-[#8f98a0] text-xs">
+                        <td className="py-2 pr-4 text-xs text-[#8f98a0]">
                           <StatusBadge status={entry.status} />
                         </td>
-                        <td className="py-2 pr-4 text-[#8f98a0] text-xs">{entry.chip}</td>
-                        <td className="py-2 pr-4 text-[#8f98a0] text-xs">
-                          {entry.method} · {entry.fps ?? "—"} FPS · {entry.ram_gb ? `${entry.ram_gb}GB RAM` : "—"}
+                        <td className="py-2 pr-4 text-xs text-[#8f98a0]">
+                          {entry.chip}
                         </td>
-                        <td className="py-2 text-[#8f98a0] text-xs italic">{entry.notes}</td>
+                        <td className="py-2 pr-4 text-xs text-[#8f98a0]">
+                          {entry.method} · {entry.fps ?? "—"} FPS ·{" "}
+                          {entry.ram_gb ? `${entry.ram_gb}GB RAM` : "—"}
+                        </td>
+                        <td className="py-2 text-xs text-[#8f98a0] italic">
+                          {entry.notes ?? "—"}
+                        </td>
                       </tr>
                     ))}
                 </React.Fragment>
               );
             })}
+
             {filtered.length === 0 && (
               <tr>
                 <td colSpan={5} className="py-10 text-center text-[#8f98a0]">
