@@ -33,7 +33,7 @@ export default function SubmitPage() {
 
     const { error } = await supabase.from("entries").insert([
       {
-        name: form.name,
+        name: form.name.trim().replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()),
         type: form.type,
         status: form.status,
         chip: form.chip,
