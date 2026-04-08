@@ -25,11 +25,7 @@ const statusRank: Record<string, number> = {
 function bestStatus(entries: Entry[]) {
   return entries
     .slice()
-    .sort(
-      (a, b) =>
-        (statusRank[a.status] ?? 999) -
-        (statusRank[b.status] ?? 999)
-    )[0]?.status ?? "unknown";
+    .sort((a, b) => (statusRank[a.status] ?? 999) - (statusRank[b.status] ?? 999))[0]?.status ?? "unknown";
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -38,19 +34,13 @@ function StatusBadge({ status }: { status: string }) {
     partial: "bg-[#b8860b] text-white",
     broken: "bg-[#8b0000] text-white",
   };
-
   const labels: Record<string, string> = {
     working: "✓ Working",
     partial: "~ Partial",
     broken: "✗ Broken",
   };
-
   return (
-    <span
-      className={`px-2 py-0.5 rounded text-xs font-semibold ${
-        styles[status] ?? "bg-[#2a3f5f] text-white"
-      }`}
-    >
+    <span className={`px-2 py-0.5 rounded text-xs font-semibold ${styles[status] ?? "bg-[#2a3f5f] text-white"}`}>
       {labels[status] ?? status}
     </span>
   );
@@ -60,6 +50,7 @@ export default function Home() {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -83,9 +74,8 @@ export default function Home() {
 
   const filtered = Object.entries(grouped)
     .filter(([name]) => name.includes(searchLower))
-    .sort(([a], [b]) =>
-      a.localeCompare(b, undefined, { sensitivity: "base" })
-    );
+    .filter(([, group]) => !statusFilter || bestStatus(group) === statusFilter)
+    .sort(([a], [b]) => a.localeCompare(b, undefined, { sensitivity: "base" }));
 
   const toggle = (name: string) => {
     setExpanded((prev) => {
@@ -95,11 +85,17 @@ export default function Home() {
     });
   };
 
-  if (error)
-    return <pre className="text-red-400 p-6">Error: {error}</pre>;
+  if (error) return <pre className="text-red-400 p-6">Error: {error}</pre>;
 
   const uniqueGames = Object.keys(grouped).length;
   const totalReviews = entries.length;
+
+  const filterButtons = [
+    { label: "All", value: null, style: "bg-[#2a3f5f] hover:bg-[#3a5070] text-white" },
+    { label: "✓ Working", value: "working", style: "bg-[#4c9a2a] hover:bg-[#5cb830] text-white" },
+    { label: "~ Partial", value: "partial", style: "bg-[#b8860b] hover:bg-[#d4980c] text-white" },
+    { label: "✗ Broken", value: "broken", style: "bg-[#8b0000] hover:bg-[#a00000] text-white" },
+  ];
 
   return (
     <main className="min-h-screen bg-[#1b2838] text-[#c6d4df] font-sans">
@@ -112,7 +108,6 @@ export default function Home() {
             Game & app compatibility for Apple Silicon on Asahi Linux
           </p>
         </div>
-
         <a
           href="/submit"
           className="bg-[#4c9a2a] hover:bg-[#5cb830] text-white font-semibold px-4 py-2 rounded transition-colors text-sm whitespace-nowrap"
@@ -122,7 +117,7 @@ export default function Home() {
       </div>
 
       <div className="px-6 py-6">
-        <div className="flex items-center gap-4 mb-6">
+        <div className="flex flex-wrap items-center gap-3 mb-4">
           <input
             type="text"
             placeholder="Search games & apps..."
@@ -130,13 +125,27 @@ export default function Home() {
             onChange={(e) => setSearch(e.target.value)}
             className="w-full max-w-md bg-[#2a3f5f] border border-[#3d5a7a] rounded px-4 py-2 text-[#c6d4df] placeholder-[#8f98a0] focus:outline-none focus:border-[#66c0f4]"
           />
-          <span className="text-sm text-[#8f98a0] whitespace-nowrap">
-            {uniqueGames} {uniqueGames === 1 ? "game" : "games"} ·{" "}
-            {totalReviews} {totalReviews === 1 ? "review" : "reviews"} — missing yours?{" "}
-            <a href="/submit" className="text-[#66c0f4] hover:underline">
-              Add it
-            </a>
-          </span>
+          <div className="flex gap-2">
+            {filterButtons.map((btn) => (
+              <button
+                key={btn.label}
+                onClick={() => setStatusFilter(btn.value)}
+                className={`px-3 py-2 rounded text-xs font-semibold transition-colors ${btn.style} ${
+                  statusFilter === btn.value ? "ring-2 ring-white/50" : "opacity-70"
+                }`}
+              >
+                {btn.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mb-4 text-sm text-[#8f98a0]">
+          {uniqueGames} {uniqueGames === 1 ? "game" : "games"} · {totalReviews}{" "}
+          {totalReviews === 1 ? "review" : "reviews"} — missing yours?{" "}
+          <a href="/submit" className="text-[#66c0f4] hover:underline">
+            Add it
+          </a>
         </div>
 
         <table className="w-full border-collapse text-sm">
@@ -149,61 +158,42 @@ export default function Home() {
               <th className="pb-3 pr-4 font-medium">Reports</th>
             </tr>
           </thead>
-
           <tbody>
             {filtered.map(([key, group]) => {
               const isOpen = expanded.has(key);
               const first = group[0];
-
               return (
                 <React.Fragment key={key}>
                   <tr
                     onClick={() => toggle(key)}
                     className="border-b border-[#2a3f5f] hover:bg-[#2a3f5f]/30 cursor-pointer"
                   >
-                    <td className="py-3 pr-4 text-[#8f98a0]">
-                      {isOpen ? "▼" : "▶"}
-                    </td>
-                    <td className="py-3 pr-4 text-white font-medium">
-                      {first.name}
-                    </td>
-                    <td className="py-3 pr-4 text-[#8f98a0] capitalize">
-                      {first.type}
-                    </td>
+                    <td className="py-3 pr-4 text-[#8f98a0]">{isOpen ? "▼" : "▶"}</td>
+                    <td className="py-3 pr-4 text-white font-medium">{first.name}</td>
+                    <td className="py-3 pr-4 text-[#8f98a0] capitalize">{first.type}</td>
                     <td className="py-3 pr-4">
                       <StatusBadge status={bestStatus(group)} />
                     </td>
-                    <td className="py-3 pr-4 text-[#8f98a0]">
-                      {group.length}
-                    </td>
+                    <td className="py-3 pr-4 text-[#8f98a0]">{group.length}</td>
                   </tr>
-
                   {isOpen &&
                     group.map((entry) => (
-                      <tr
-                        key={entry.id}
-                        className="bg-[#172430] border-b border-[#2a3f5f]"
-                      >
+                      <tr key={entry.id} className="bg-[#172430] border-b border-[#2a3f5f]">
                         <td className="py-2 pr-4"></td>
                         <td className="py-2 pr-4 text-xs text-[#8f98a0]">
                           <StatusBadge status={entry.status} />
                         </td>
-                        <td className="py-2 pr-4 text-xs text-[#8f98a0]">
-                          {entry.chip}
-                        </td>
+                        <td className="py-2 pr-4 text-xs text-[#8f98a0]">{entry.chip}</td>
                         <td className="py-2 pr-4 text-xs text-[#8f98a0]">
                           {entry.method} · {entry.fps ?? "—"} FPS ·{" "}
                           {entry.ram_gb ? `${entry.ram_gb}GB RAM` : "—"}
                         </td>
-                        <td className="py-2 text-xs text-[#8f98a0] italic">
-                          {entry.notes ?? "—"}
-                        </td>
+                        <td className="py-2 text-xs text-[#8f98a0] italic">{entry.notes ?? "—"}</td>
                       </tr>
                     ))}
                 </React.Fragment>
               );
             })}
-
             {filtered.length === 0 && (
               <tr>
                 <td colSpan={5} className="py-10 text-center text-[#8f98a0]">
