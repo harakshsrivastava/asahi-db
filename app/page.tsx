@@ -81,9 +81,11 @@ export default function Home() {
 
   const searchLower = search.toLowerCase();
 
-  const filtered = Object.entries(grouped).filter(([name]) =>
-    name.includes(searchLower)
-  );
+  const filtered = Object.entries(grouped)
+    .filter(([name]) => name.includes(searchLower))
+    .sort(([a], [b]) =>
+      a.localeCompare(b, undefined, { sensitivity: "base" })
+    );
 
   const toggle = (name: string) => {
     setExpanded((prev) => {
